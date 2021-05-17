@@ -6,7 +6,9 @@ Q:
 
 A:
 
-1. $kubectl taint node node-01 app=jenkins:NoSchedule
-2. $kubectl apply -f jenkins.yaml
-3. $kubectl run -it --rm --image=gcr.io/kubernetes-e2e-test-images/dnsutils:1.3  dnsutils -- nslookup jenkins.default.svc.cluster.local
+```shell
+$kubectl taint node node-01 app=jenkins:NoSchedule
+$kubectl apply -f jenkins.yaml
+$kubectl run -it --rm --image=gcr.io/kubernetes-e2e-test-images/dnsutils:1.3  dnsutils -- nslookup jenkins.default.svc.cluster.local
 $kubectl apply -f 7-dnsutils.yaml
+```

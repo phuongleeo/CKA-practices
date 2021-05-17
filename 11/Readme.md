@@ -2,7 +2,10 @@ Q: Create a static pod
 A: The full link to document [here] (https://kubernetes.io/docs/tasks/configure-pod-container/static-pod/)
 
 use minikube to complete this task
+
+```shell
 $minikube ssh -n minikube-m02 --native-ssh=true
+```
 
 `Run this command on the node where kubelet is running`
 
