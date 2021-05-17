@@ -1,0 +1,21 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  creationTimestamp: null
+  name: parallel
+spec:
+  parallelism: 5
+  completions: 20 
+  template:
+    metadata:
+      creationTimestamp: null
+    spec:
+      containers:
+      - command:
+        - echo
+        - Hello parallel world
+        image: busybox
+        name: parallel
+        resources: {}
+      restartPolicy: Never
+status: {}

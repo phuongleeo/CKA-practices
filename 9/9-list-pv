@@ -1,0 +1,3 @@
+NAME                                       CAPACITY   ACCESS MODES   RECLAIM POLICY   STATUS   CLAIM                     STORAGECLASS   REASON   AGE
+pvc-4cb02918-a878-4756-a6f3-679e20e18d2c   10Gi       RWO            Delete           Bound    bootstrap/data-vault1-0   gp2                     56d
+pvc-f1002248-e2bd-481f-ba96-88549d1cf015   10Gi       RWO            Delete           Bound    bootstrap/data-vault-0    gp2                     58d

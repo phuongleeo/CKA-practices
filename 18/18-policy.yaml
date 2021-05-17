@@ -1,0 +1,143 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: podinfo
+  name: podinfo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: podinfo
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: podinfo
+    spec:
+      containers:
+      - image: stefanprodan/podinfo
+        name: podinfo
+        resources: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: podinfo
+spec:
+  ports:
+  - port: 9898
+    targetPort: 9898
+  selector:
+   app: podinfo
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: busybox
+  name: busybox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox
+  strategy: {}
+  template:
+    metadata:
+      labels:
+        app: busybox
+    spec:
+      containers:
+      - image: busybox
+        name: busybox
+        command:
+        - sleep
+        - 1h
+        resources: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  labels:
+    app: echo-server
+  name: echo-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-server
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: echo-server
+    spec:
+      containers:
+      - image: jmalloc/echo-server
+        name: echo-server
+        resources: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: echo-server
+  labels:
+    app: svc-echoserver
+spec:
+  ports:
+  - port: 8080
+    targetPort: 8080
+  selector:
+   app: echo-server
+---
+#deny all
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-all
+spec:
+  podSelector: {}
+  policyTypes:
+  - Ingress
+#  - Egress
+---
+# allow busybox
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-podinfo-busybox
+spec:
+  podSelector:
+    matchLabels:
+      app: podinfo
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: busybox
+          # namespaceSelector:
+          #   matchLabels:
+          #     grant: access
+      ports:
+       - protocol: TCP
+         port: 9898
+---
+# allow busybox
+kind: NetworkPolicy
+apiVersion: networking.k8s.io/v1
+metadata:
+  name: allow-echoserver-busybox
+spec:
+  podSelector:
+    matchLabels:
+      app: echo-server
+  ingress:
+    - from:
+        - podSelector:
+            matchLabels:
+              app: busybox

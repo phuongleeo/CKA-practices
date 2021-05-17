@@ -1,0 +1,51 @@
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: busybox
+  name: busybox
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: busybox
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: busybox
+    spec:
+      containers:
+      - image: busybox
+        command:
+        - sleep
+        - 1h
+        name: busybox
+        env:
+        - name: PROVISIONER 
+          valueFrom:
+           secretKeyRef:
+             name: 13-secret 
+             key: PROVISIONER 
+        resources: {}
+        volumeMounts:
+        - name: secret-vol
+          mountPath: /tmp/secret-vol 
+      volumes:
+      - name: secret-vol
+        secret:
+          secretName: 13-secret      
+---
+apiVersion: v1
+data:
+  PROVISIONER: bWludWt1YmU=
+kind: Secret
+metadata:
+  creationTimestamp: null
+  name: 13-secret
+
+
+#kubectl get secret 13-secret -o jsonpath={.data.PROVISIONER}|base64 -D

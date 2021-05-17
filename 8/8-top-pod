@@ -1,0 +1,3 @@
+NAMESPACE     NAME                                                              CPU(cores)   MEMORY(bytes)   
+testing       worker-backend-69776db899-567mz                                   498m         141Mi           
+bootstrap     datadog-agent-qt5gj                                               107m         145Mi           

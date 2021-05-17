@@ -1,0 +1,115 @@
+
+---
+apiVersion: extensions/v1beta1
+kind: Ingress
+metadata:
+  annotations:
+    external-dns.alpha.kubernetes.io: enable
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+    kubernetes.io/ingress.class: nginx
+  creationTimestamp: null
+  name: dev
+spec:
+  ingressClassName: nginx
+  rules:
+  - host: dev.wizelineos.com
+    http:
+      paths:
+      - backend:
+          serviceName: podinfo
+          servicePort: 9898
+        path: /podinfo/(.*)
+        pathType: Prefix
+      - backend:
+          serviceName: echo-server
+          servicePort: 8080
+        path: /echo-server
+        pathType: Exact
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: podinfo
+  name: podinfo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: podinfo
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: podinfo
+    spec:
+      containers:
+      - image: stefanprodan/podinfo
+        name: podinfo
+        resources: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: podinfo
+  name: podinfo
+spec:
+  ports:
+  - name: "9898"
+    port: 9898
+    protocol: TCP
+    targetPort: 9898
+  selector:
+    app: podinfo
+  type: ClusterIP
+status:
+  loadBalancer: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: echo-server
+  name: echo-server
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-server
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: echo-server
+    spec:
+      containers:
+      - image: jmalloc/echo-server
+        name: echo-server
+        resources: {}
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  creationTimestamp: null
+  labels:
+    app: echo-server
+  name: echo-server
+spec:
+  ports:
+  - name: "echo-server"
+    port: 8080
+    protocol: TCP
+    targetPort: 8080
+  selector:
+    app: echo-server
+  type: ClusterIP
+status:
+  loadBalancer: {}
+
