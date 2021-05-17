@@ -1,0 +1,48 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: jenkins
+  name: jenkins
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: jenkins
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: jenkins
+    spec:
+      containers:
+      - image: jenkins/jenkins:alpine
+        name: jenkins
+        livenessProbe:
+          tcpSocket:
+            port: 8080
+        resources: {}
+      tolerations:
+      - key: "app"
+        operator: "Equal"
+        value: "jenkins"
+        effect: "PreferNoSchedule"
+status: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  labels:
+    app: jenkins
+  name: jenkins
+spec:
+  ports:
+    - name: jenkins
+      port: 8080
+      protocol: TCP
+      targetPort: 8080
+  selector:
+    app: jenkins
+  type: ClusterIP

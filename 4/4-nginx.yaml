@@ -1,0 +1,51 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: nginx
+  name: nginx
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nginx
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: nginx
+    spec:
+      # securityContext:
+      #   runAsUser: 1000
+      #   runAsGroup: 3000
+      #   fsGroup: 2000
+      containers:
+      - image: nginx:1.12.2
+        name: nginx
+        resources:
+          limits:
+            cpu: "100m"
+            memory: "50M"
+        securityContext:
+          allowPrivilegeEscalation: false
+          capabilities:
+            drop: ["ALL"]
+        volumeMounts:
+          - mountPath: /var/cache/nginx
+            name: cache-volume
+          - mountPath: /data
+            name: directory-volume
+          - mountPath: /data/a.txt
+            name: file-volume
+      volumes:
+      - name: cache-volume
+        emptyDir: {}
+      - name: directory-volume
+        hostPath:
+          path: /data
+          type: DirectoryOrCreate
+      - name: file-volume
+        hostPath:
+          path: /data/a.txt
+          type: FileOrCreate

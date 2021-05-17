@@ -1,0 +1,27 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: dnsutils
+  name: dnsutils
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dnsutils
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: dnsutils
+    spec:
+      containers:
+      - image: gcr.io/kubernetes-e2e-test-images/dnsutils:1.3 
+        name: busybox
+        command: 
+        - sleep
+        - 1h
+        resources: {}
+status: {}

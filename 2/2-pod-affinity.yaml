@@ -1,0 +1,58 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: podinfo
+  name: podinfo
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: podinfo
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: podinfo
+    spec:
+      containers:
+      - image: stefanprodan/podinfo 
+        name: podinfo
+        resources: {}
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  creationTimestamp: null
+  labels:
+    app: echo-server 
+  name: echo-server 
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: echo-server 
+  strategy: {}
+  template:
+    metadata:
+      creationTimestamp: null
+      labels:
+        app: echo-server 
+    spec:
+      affinity:
+        podAffinity:
+         requiredDuringSchedulingIgnoredDuringExecution:
+         - labelSelector:
+             matchExpressions:
+             - key: app 
+               operator: In
+               values:
+               - podinfo
+           topologyKey: "kubernetes.io/hostname"
+      containers:
+      - image: jmalloc/echo-server 
+        name: echo-server 
+        resources: {}
+status: {}
