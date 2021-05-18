@@ -1,0 +1,146 @@
+#Step 1: Install Docker and its dependent components
+---
+- hosts: all
+  become: true
+  vars:
+    KUBELET_VER: kubelet=1.21.1-00
+    KUBEADM_VER: kubeadm=1.21.1-00
+    KUBECTL_VER: kubectl=1.21.1-00
+  tasks:
+    - name: Setup kernel
+      sysctl:
+        name: "{{ item }}"
+        value: '1'
+        sysctl_set: yes
+        state: present
+        reload: yes
+      with_items:
+      - net.bridge.bridge-nf-call-iptables
+      - net.ipv4.ip_forward
+      - net.bridge.bridge-nf-call-ip6tables
+      - net.bridge.bridge-nf-call-arptables
+    - name: Install packages that allow apt to be used over HTTPS
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+          - apt-transport-https
+          - ca-certificates
+          - curl
+          - gnupg-agent
+          - software-properties-common
+
+    - name: Add an apt signing key for Docker
+      apt_key:
+        url: https://download.docker.com/linux/ubuntu/gpg
+        state: present
+
+    - name: Add apt repository for stable version
+      apt_repository:
+        repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
+        state: present
+
+    - name: Install docker and its dependecies
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+          - docker-ce
+          - docker-ce-cli
+          - containerd.io
+      notify:
+        - docker status
+    - name: Replace Docker driver
+      copy:
+        dest: /etc/docker/daemon.json
+        content: |
+          {
+            "exec-opts": ["native.cgroupdriver=systemd"],
+            "log-driver": "json-file",
+            "log-opts": {
+              "max-size": "100m"
+            },
+            "storage-driver": "overlay2"
+          }
+      notify:
+        - docker status
+    - name: Add vagrant user to docker group
+      user:
+        name: vagrant
+        group: docker
+    # Step 2: Kubelet will not start if the system has swap enabled, so we are disabling swap using the below code.
+    - name: Remove swapfile from /etc/fstab
+      mount:
+        name: "{{ item }}"
+        fstype: swap
+        state: absent
+      with_items:
+        - swap
+        - none
+
+    - name: Disable swap
+      command: swapoff -a
+      when: ansible_swaptotal_mb > 0
+    #3: Installing kubelet, kubeadm and kubectl using the below code
+    - name: Add an apt signing key for Kubernetes
+      apt_key:
+        url: https://packages.cloud.google.com/apt/doc/apt-key.gpg
+        state: present
+
+    - name: Adding apt repository for Kubernetes
+      apt_repository:
+        repo: deb https://apt.kubernetes.io/ kubernetes-xenial main
+        state: present
+        filename: kubernetes.list
+
+    - name: Install Kubernetes binaries
+      apt:
+        name: "{{ packages }}"
+        state: present
+        update_cache: yes
+      vars:
+        packages:
+          - "{{ KUBELET_VER }}"
+          - "{{ KUBEADM_VER }}"
+          - "{{ KUBECTL_VER }}"
+    - name: Configure node ip
+      lineinfile:
+        path: /etc/default/kubelet
+        line: KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}
+        create: yes
+
+    #4: Initialize the Kubernetes cluster with kubeadm using the below code (applicable only on master node).
+    - name: check existed kubelet config
+      stat:
+        path: /etc/kubernetes/pki/ca.crt
+      register: kubelet
+    # - debug:
+    #     var: kubelet
+    # - name: Remove previous kubeadm config
+    #   command: kubeadm reset --force
+    #   when: kubelet.stat.exists
+
+    #5: Join the nodes to the Kubernetes cluster using below code.
+    - name: Copy the join command to server location
+      copy: src=join-command dest=/tmp/join-command.sh mode=0777
+
+    - name: Join the node to cluster
+      command: sh /tmp/join-command.sh
+      when: kubelet.stat.exists == 'false'
+    - name: Configure cgroup driver
+      lineinfile:
+        path: /var/lib/kubelet/config.yaml
+        regexp: '^cgroupDriver*'
+        line: 'cgroupDriver: systemd'
+      notify:
+        - docker status
+        - kubelet status
+  handlers:
+    - name: docker status
+      service: name=docker state=restarted
+    - name: kubelet status
+      service: name=kubelet state=restarted

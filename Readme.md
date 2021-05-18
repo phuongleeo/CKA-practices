@@ -34,3 +34,21 @@ These tasks are required a minikube cluster and a real running cluster ( EKS for
 # EKS
 
 [Terraform](https://github.com/phuongleeo/k8s-todo/tree/master/tf-INF/development/eks)
+
+# Vagrant
+
+```shell
+$cd Vagrant
+$vagrant up
+$ ## Accessing master
+$ vagrant ssh k8s-master
+vagrant@k8s-master:~$ kubectl get nodes
+NAME         STATUS   ROLES    AGE     VERSION
+k8s-master   Ready    master   18m     v1.21.1
+node-1       Ready    <none>   12m     v1.21.1
+node-2       Ready    <none>   6m22s   v1.21.1
+
+$ ## Accessing nodes
+$ vagrant ssh node-1
+$ vagrant ssh node-2
+```
