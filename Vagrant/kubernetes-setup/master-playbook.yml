@@ -2,13 +2,15 @@
 ---
 - hosts: all
   become: true
-  vars:
-    KUBELET_VER: kubelet=1.21.1-00
-    KUBEADM_VER: kubeadm=1.21.1-00
-    KUBECTL_VER: kubectl=1.21.1-00
   tasks:
+    - name: Load kernel module
+      modprobe:
+        name: "{{ item }}"
+      with_items:
+        - overlay
+        - br_netfilter
     - name: Setup kernel
-      ansible.posix.sysctl:
+      sysctl:
         name: "{{ item }}"
         value: '1'
         sysctl_set: yes
@@ -104,16 +106,51 @@
         update_cache: yes
       vars:
         packages:
-          - "{{ KUBELET_VER }}"
-          - "{{ KUBEADM_VER }}"
-          - "{{ KUBECTL_VER }}"
+          - kubelet={{ kubelet_version }}
+          - kubeadm={{ kubeadm_version }}
+          - kubectl={{ kubectl_version }}
+    - name: Install etcdctl
+      block:
+        - name: Test etcdctl
+          stat:
+            path: /usr/local/bin/etcdctl
+          register: etcdctl
+        - name: Create script
+          copy:
+            dest: /tmp/etcdctl.sh
+            content: |
+              ETCD_VER=v3.4.16
+              # choose either URL
+              GOOGLE_URL=https://storage.googleapis.com/etcd
+              GITHUB_URL=https://github.com/etcd-io/etcd/releases/download
+              DOWNLOAD_URL=${GOOGLE_URL}
 
+              rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+              rm -rf /tmp/etcd-download-test && mkdir -p /tmp/etcd-download-test
+
+              curl -L ${DOWNLOAD_URL}/${ETCD_VER}/etcd-${ETCD_VER}-linux-amd64.tar.gz -o /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+              tar xzvf /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz -C /tmp/etcd-download-test --strip-components=1
+              rm -f /tmp/etcd-${ETCD_VER}-linux-amd64.tar.gz
+              mv /tmp/etcd-download-test/etcdctl /usr/local/bin/
+              /usr/local/bin/etcdctl version
+            mode: '0644'
+          when: etcdctl.stat.exists == False
+        - name: run script
+          command: sh /tmp/etcdctl.sh
+          when: etcdctl.stat.exists == False
     - name: Configure node ip
       lineinfile:
         path: /etc/default/kubelet
         line: KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}
         create: yes
-
+    - name: Fix Kubelet failed to get stats
+      copy:
+        dest: /etc/systemd/system/kubelet.service.d/11-kubeadm.conf
+        content: |
+          [Service]
+          After=docker.service
+      notify:
+        - kubelet status
     - name: Restart kubelet
       service:
         name: kubelet
@@ -161,9 +198,23 @@
     - name: Copy join command to local file
       local_action: copy content="{{ join_command.stdout_lines[0] }}" dest="./join-command"
       become: false
+    - name: Copy kube config file to local file
+      ansible.builtin.fetch:
+        src: "/home/vagrant/.kube/config"
+        dest: "./config"
+        flat: yes
+      become: false
   #8: Setup a handler for checking Docker daemon using the below code
   handlers:
     - name: docker status
-      service: name=docker state=restarted
+      # service: name=docker state=restarted
+      systemd:
+        name: docker
+        state: restarted
+        enabled: yes
     - name: kubelet status
-      service: name=kubelet state=restarted
+      # service: name=kubelet state=restarted
+      systemd:
+        name: kubelet
+        state: restarted
+        enabled: yes

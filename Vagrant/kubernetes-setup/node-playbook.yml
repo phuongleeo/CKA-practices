@@ -2,11 +2,13 @@
 ---
 - hosts: all
   become: true
-  vars:
-    KUBELET_VER: kubelet=1.21.1-00
-    KUBEADM_VER: kubeadm=1.21.1-00
-    KUBECTL_VER: kubectl=1.21.1-00
   tasks:
+    - name: Load kernel module
+      modprobe:
+        name: "{{ item }}"
+      with_items:
+        - overlay
+        - br_netfilter
     - name: Setup kernel
       sysctl:
         name: "{{ item }}"
@@ -104,25 +106,29 @@
         update_cache: yes
       vars:
         packages:
-          - "{{ KUBELET_VER }}"
-          - "{{ KUBEADM_VER }}"
-          - "{{ KUBECTL_VER }}"
+          - kubelet={{ kubelet_version }}
+          - kubeadm={{ kubeadm_version }}
+          - kubectl={{ kubectl_version }}
     - name: Configure node ip
       lineinfile:
         path: /etc/default/kubelet
         line: KUBELET_EXTRA_ARGS=--node-ip={{ node_ip }}
         create: yes
-
+    - name: Fix Kubelet failed to get stats
+      copy:
+        dest: /etc/systemd/system/kubelet.service.d/11-kubeadm.conf
+        content: |
+          [Service]
+          After=docker.service
+      notify:
+        - kubelet status
     #4: Initialize the Kubernetes cluster with kubeadm using the below code (applicable only on master node).
     - name: check existed kubelet config
       stat:
         path: /etc/kubernetes/pki/ca.crt
       register: kubelet
-    # - debug:
-    #     var: kubelet
-    # - name: Remove previous kubeadm config
-    #   command: kubeadm reset --force
-    #   when: kubelet.stat.exists
+    - debug:
+        var: kubelet
 
     #5: Join the nodes to the Kubernetes cluster using below code.
     - name: Copy the join command to server location
@@ -130,17 +136,25 @@
 
     - name: Join the node to cluster
       command: sh /tmp/join-command.sh
-      when: kubelet.stat.exists == 'false'
+      when: kubelet.stat.exists == False
     - name: Configure cgroup driver
       lineinfile:
         path: /var/lib/kubelet/config.yaml
         regexp: '^cgroupDriver*'
         line: 'cgroupDriver: systemd'
       notify:
-        - docker status
         - kubelet status
+        - docker status
   handlers:
     - name: docker status
-      service: name=docker state=restarted
+      # service: name=docker state=restarted
+      systemd:
+        name: docker
+        state: restarted
+        enabled: yes
     - name: kubelet status
-      service: name=kubelet state=restarted
+      # service: name=kubelet state=restarted
+      systemd:
+        name: kubelet
+        state: restarted
+        enabled: yes
