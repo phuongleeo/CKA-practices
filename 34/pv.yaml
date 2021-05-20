@@ -1,0 +1,35 @@
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: pv-volume
+spec:
+  storageClassName: "csi-hostpath-sc"
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 10Mi
+---
+apiVersion: v1
+kind: Pod
+metadata:
+  creationTimestamp: null
+  labels:
+    run: web-server
+  name: web-server
+spec:
+  containers:
+    - image: nginx:alpine
+      name: nginx
+      resources: {}
+      volumeMounts:
+        - mountPath: /usr/share/nginx/html
+          name: foo-pvc
+  volumes:
+    - name: foo-pvc
+      persistentVolumeClaim:
+        claimName: foo-pv
+  dnsPolicy: ClusterFirst
+  restartPolicy: Always
+status: {}

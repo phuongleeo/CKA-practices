@@ -1,0 +1,46 @@
+---
+apiVersion: v1
+kind: PersistentVolume
+metadata:
+  name: app-config
+spec:
+  storageClassName: ""
+  claimRef:
+    name: foo-pvc
+  capacity:
+    storage: 2Gi
+  accessModes:
+    - ReadWriteMany
+  hostPath:
+    path: "/srv/app-config"
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: foo-pvc
+# spec:
+#   storageClassName: "" # Empty string must be explicitly set otherwise default StorageClass will be set
+#   volumeName: app-config
+# ---
+# apiVersion: v1
+# kind: Pod
+# metadata:
+#   creationTimestamp: null
+#   labels:
+#     run: kucc1
+#   name: kucc1
+# spec:
+#   containers:
+#     - image: nginx:alpine
+#       name: nginx
+#       resources: {}
+#       volumeMounts:
+#         - mountPath: /srv/app-config
+#           name: foo-pvc
+#   volumes:
+#     - name: foo-pvc
+#       persistentVolumeClaim:
+#         claimName: foo-pv
+#   dnsPolicy: ClusterFirst
+#   restartPolicy: Always
+# status: {}
