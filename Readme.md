@@ -64,3 +64,11 @@ k8s-master   Ready    control-plane,master   4h5m    v1.21.1   192.168.50.10   <
 node-1       Ready    <none>                 3h55m   v1.21.1   192.168.50.20   <none>        Ubuntu 16.04.7 LTS   4.4.0-210-generic   docker://20.10.6
 node-2       Ready    <none>                 3h45m   v1.21.1   192.168.50.30   <none>        Ubuntu 16.04.7 LTS   4.4.0-210-generic   docker://20.10.6
 ```
+
+### Note: Generate kubeconfig in case of missing file
+
+- Master node:
+
+```shell
+kubeadm init phase kubeconfig admin --apiserver-advertise-address x.x.x.x --apiserver-bind-port 8443 --cert-dir /var/lib/minikube/certs --kubeconfig-dir {{ /home/change_me }}
+```
