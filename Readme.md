@@ -72,3 +72,17 @@ node-2       Ready    <none>                 3h45m   v1.21.1   192.168.50.30   <
 ```shell
 kubeadm init phase kubeconfig admin --apiserver-advertise-address x.x.x.x --apiserver-bind-port 8443 --cert-dir /var/lib/minikube/certs --kubeconfig-dir {{ /home/change_me }}
 ```
+
+## Alias
+
+```shell
+source <(kubectl completion bash)
+complete -F __start_kubectl k
+alias k="kubectl"
+alias kgd="k get deploy"
+alias kgp="k get pods"
+alias kgn="k get nodes"
+alias kgs="k get svc"
+alias kge="k get events --sort-by='.metadata.creationTimestamp' |tail -8"
+export ETCDCTL_API=3
+```
