@@ -21,7 +21,7 @@ w table
 
 - Stop API server: either move static pod api-server to another location or stop systemd service
 
-- Save snapshot: perform on 1 master node
+- Save snapshot: perform on 1 master node and propagate snapshot file to the rest nodes
 
 ```shell
 $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key snapshot save snapshot.db
@@ -94,45 +94,70 @@ $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etc
   ```
 
   - Waiting for etcd service up and running on master 1
-  - Adding individual master node 2
 
   ```shell
-  $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key member add master-2 --peer-urls=https://192.168.50.12:2380
-  Member e4f4512d5bb2e8e5 added to cluster 9b25ac60976b4671
-
-  ETCD_NAME="master-2"
-  ETCD_INITIAL_CLUSTER="master-1=https://master-1:2380,master-2=https://192.168.50.12:2380"
-  ETCD_INITIAL_ADVERTISE_PEER_URLS="https://192.168.50.12:2380"
-  ETCD_INITIAL_CLUSTER_STATE="existing"
+  # etcdctl member list -w table
+  +------------------+---------+----------+---------------------------+-------------------------+--------------+
+  |        ID        | STATUS  | NAME     |       PEER ADDRS       |       CLIENT ADDRS         | IS LEARNER   |
+  +------------------+---------+----------+---------------------------+---------------------------+------------+
+  | 1afbe05ae8b5fbbe | started | master-1 | https://master-1:2380  | https://192.168.50.11:2379 |      false   |
+  +------------------+---------+-------+---------------------------+----------------------------+--------------+
   ```
 
-  - Adding master node 3
+- Join cluster:
 
-  ```shell
-  $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.root@master-1:/etc/kubernetes# etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key member add master-3 --peer-urls=https://192.168.50.13:2380
-  Member  c71992ce41e891f added to cluster 9b25ac60976b4671
+  - First option:
+    - On the rest nodes, we’ll run command to join the cluster:
+    ```shell
+    $kubeadm join phase control-plane-join etcd --control-plane
+    ```
+  - Second option:
 
-  ETCD_NAME="master-3"
-  ETCD_INITIAL_CLUSTER="master-3=https://192.168.50.13:2380,master-1=https://master-1:2380,master-2=https://192.168.50.12:2380"
-  ETCD_INITIAL_ADVERTISE_PEER_URLS="https://192.168.50.13:2380"
-  ETCD_INITIAL_CLUSTER_STATE="existing"
-  ```
+    - Adding individual master node 2
 
-- Master 2
+    ```shell
+    $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key member add master-2 --peer-urls=https://192.168.50.12:2380
+    Member e4f4512d5bb2e8e5 added to cluster 9b25ac60976b4671
 
-  - Edit etcd static pod
+    ETCD_NAME="master-2"
+    ETCD_INITIAL_CLUSTER="master-1=https://master-1:2380,master-2=https://192.168.50.12:2380"
+    ETCD_INITIAL_ADVERTISE_PEER_URLS="https://192.168.50.12:2380"
+    ETCD_INITIAL_CLUSTER_STATE="existing"
+    ```
 
-  ```yaml
-  #...
-  #Add exactly values which was provided as above, otherwise etcd will throw error: unmatched member
-  - --initial-cluster=master-1=https://master-1:2380,master-2=https://192.168.50.12:2380
-  - --initial-cluster-state=existing
-  ```
+    - Adding master node 3
+
+    ```shell
+    $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key member add master-3 --peer-urls=https://192.168.50.13:2380
+    Member  c71992ce41e891f added to cluster 9b25ac60976b4671
+
+    ETCD_NAME="master-3"
+    ETCD_INITIAL_CLUSTER="master-3=https://192.168.50.13:2380,master-1=https://master-1:2380,master-2=https://192.168.50.12:2380"
+    ETCD_INITIAL_ADVERTISE_PEER_URLS="https://192.168.50.13:2380"
+    ETCD_INITIAL_CLUSTER_STATE="existing"
+    ```
+
+    - Master 2 and master 3
+
+      - Delete the obsoled data
+
+      ```shell
+      $rm -rf /var/lib/etcd/member
+      ```
+
+      - Edit etcd static pod
+
+      ```yaml
+      #...
+      #Add exactly values which was provided as above, otherwise etcd will throw error: unmatched member
+      - --initial-cluster=master-1=https://master-1:2380,master-2=https://192.168.50.12:2380
+      - --initial-cluster-state=existing
+      ```
 
 - Verify status
 
 ```shell
-root@master-1:/etc/kubernetes# etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key member list -w table
+$etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etcd/server.crt --key=/etc/kubernetes/pki/etcd/server.key member list -w table
 +------------------+---------+----------+----------------------------+----------------------------+------------+
 |        ID        | STATUS  |   NAME   |         PEER ADDRS         |        CLIENT ADDRS        | IS LEARNER |
 +------------------+---------+----------+----------------------------+----------------------------+------------+
