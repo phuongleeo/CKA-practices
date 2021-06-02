@@ -9,6 +9,7 @@
       with_items:
         - overlay
         - br_netfilter
+      tags: bootstrap
     - name: Setup kernel
       sysctl:
         name: "{{ item }}"
@@ -21,6 +22,7 @@
       - net.ipv4.ip_forward
       - net.bridge.bridge-nf-call-ip6tables
       - net.bridge.bridge-nf-call-arptables
+      tags: bootstrap
     - name: Install packages that allow apt to be used over HTTPS
       apt:
         name: "{{ packages }}"
@@ -33,17 +35,17 @@
           - curl
           - gnupg-agent
           - software-properties-common
-
+      tags: bootstrap
     - name: Add an apt signing key for Docker
       apt_key:
         url: https://download.docker.com/linux/ubuntu/gpg
         state: present
-
+      tags: bootstrap
     - name: Add apt repository for stable version
       apt_repository:
         repo: deb [arch=amd64] https://download.docker.com/linux/ubuntu xenial stable
         state: present
-
+      tags: bootstrap
     - name: Install docker and its dependecies
       apt:
         name: "{{ packages }}"
@@ -56,6 +58,7 @@
           - containerd.io
       notify:
         - docker status
+      tags: bootstrap
     - name: Replace Docker driver
       copy:
         dest: /etc/docker/daemon.json
@@ -70,10 +73,12 @@
           }
       notify:
         - docker status
+      tags: bootstrap
     - name: Add vagrant user to docker group
       user:
         name: vagrant
         group: docker
+      tags: bootstrap
     # Step 2: Kubelet will not start if the system has swap enabled, so we are disabling swap using the below code.
     - name: Remove swapfile from /etc/fstab
       mount:
@@ -83,10 +88,11 @@
       with_items:
         - swap
         - none
-
+      tags: bootstrap
     - name: Disable swap
       command: swapoff -a
       when: ansible_swaptotal_mb > 0
+      tags: bootstrap
     #3: Installing kubelet, kubeadm and kubectl using the below code
     - name: Add an apt signing key for Kubernetes
       apt_key:

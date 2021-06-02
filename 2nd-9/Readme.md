@@ -55,3 +55,6 @@ $ sudo etcdctl --cert=/var/lib/minikube/certs/etcd/server.crt --key=/var/lib/min
 | https://192.168.64.10:2379 |   true | 7.04349ms |       |
 +----------------------------+--------+-----------+-------+
 ```
+
+- Advance topic: Restore cluster Etcd
+  [40](../40/Readme.md)

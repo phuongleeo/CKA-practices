@@ -43,6 +43,7 @@ These tasks are required a minikube cluster and a real running cluster ( EKS for
 
 ```shell
 $cd Vagrant
+$vagrant plugin install vagrant-vbguest
 $vagrant up
 $ ## Accessing master
 $ vagrant ssh k8s-master
@@ -72,6 +73,10 @@ node-2       Ready    <none>                 3h45m   v1.21.1   192.168.50.30   <
 ```shell
 kubeadm init phase kubeconfig admin --apiserver-advertise-address x.x.x.x --apiserver-bind-port 8443 --cert-dir /var/lib/minikube/certs --kubeconfig-dir {{ /home/change_me }}
 ```
+
+- Setup HA cluster
+
+[39](39/Readme.md)
 
 ## Alias
 
