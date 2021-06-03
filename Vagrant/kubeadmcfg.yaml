@@ -1,0 +1,28 @@
+apiVersion: "kubeadm.k8s.io/v1beta2"
+kind: ClusterConfiguration
+etcd:
+    local:
+        serverCertSANs:
+        - "192.168.50.10"
+        - "192.168.50.13"
+        - "192.168.50.12"
+        - "192.168.50.11"
+        - "master-3"
+        - "master-2"
+        - "master-1"
+        peerCertSANs:
+        - "192.168.50.10"
+        - "192.168.50.13"
+        - "192.168.50.12"
+        - "192.168.50.11"
+        - "master-3"
+        - "master-2"
+        - "master-1"
+        extraArgs:
+            initial-cluster: master-1=https://192.168.50.11:2380,master-2=https://192.168.50.12:2380,master-3=https://192.168.50.13:2380
+            initial-cluster-state: new
+            name: master-3
+            listen-peer-urls: https://192.168.50.13:2380
+            listen-client-urls: https://127.0.0.1:2379,https://192.168.50.13:2379
+            advertise-client-urls: https://192.168.50.13:2379
+            initial-advertise-peer-urls: https://192.168.50.13:2380

@@ -79,7 +79,7 @@ $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etc
       name: etcd-data
   ```
 
-## Force new cluster
+## Force new cluster ( not recommendation)
 
 - Master-1
 
@@ -107,10 +107,25 @@ $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etc
 - Join cluster:
 
   - First option:
-    - On the rest nodes, we’ll run command to join the cluster:
-    ```shell
-    $kubeadm join phase control-plane-join etcd --control-plane
-    ```
+
+    - On the rest nodes:
+
+      - Delete old db : `rm -rf /var/lib/etcd/member`
+      - Remove current **etcd.yaml** : `rm -f /etc/kubernetes/manifests/etcd.yaml`
+      - We’ll run command to join the cluster: By this approach, we do have 2 options:
+
+        1. kubeadm
+
+           ```shell
+           $kubeadm join phase control-plane-join etcd --control-plane
+           ```
+
+        2. Modify the [kubeadmcfg](../Vagrant/kubeadmcfg.yaml) to approriate master ip address
+
+        ```shell
+        $kubeadm init phase etcd local --config=/vagrant/kubeadmcfg.yaml
+        ```
+
   - Second option:
 
     - Adding individual master node 2
@@ -146,13 +161,20 @@ $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etc
       ```
 
       - Edit etcd static pod
-
-      ```yaml
-      #...
-      #Add exactly values which was provided as above, otherwise etcd will throw error: unmatched member
-      - --initial-cluster=master-1=https://master-1:2380,master-2=https://192.168.50.12:2380
-      - --initial-cluster-state=existing
-      ```
+        - Master 2:
+        ```yaml
+        #...
+        #Add exactly values which was provided as above, otherwise etcd will throw error: unmatched member
+        - --initial-cluster=master-1=https://master-1:2380,master-2=https://192.168.50.12:2380
+        - --initial-cluster-state=existing
+        ```
+        - Master 3:
+        ```yaml
+        #...
+        #Add exactly values which was provided as above, otherwise etcd will throw error: unmatched member
+        - --initial-cluster="master-3=https://192.168.50.13:2380,master-1=https://master-1:2380,master-2=https://192.168.50.12:2380"
+        - --initial-cluster-state=existing
+        ```
 
 - Verify status
 
@@ -166,3 +188,9 @@ $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etc
 | e4f4512d5bb2e8e5 | started | master-2 | https://192.168.50.12:2380 | https://192.168.50.12:2379 |      false |
 +------------------+---------+----------+----------------------------+----------------------------+------------+
 ```
+
+- More Info:
+
+  1. [k8s.io](https://kubernetes.io/docs/setup/production-environment/tools/kubeadm/setup-ha-etcd-with-kubeadm/)
+  2. [ITNext](https://itnext.io/breaking-down-and-fixing-etcd-cluster-d81e35b9260d)
+  3. [Etcd](https://etcd.io/docs/v3.4/op-guide/recovery/)
