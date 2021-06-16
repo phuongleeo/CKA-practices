@@ -91,3 +91,8 @@ alias kgs="k get svc"
 alias kge="k get events --sort-by='.metadata.creationTimestamp' |tail -8"
 export ETCDCTL_API=3
 ```
+
+# Material Resources
+
+1. https://prabhatsharma.in/blog/cka-practice-test-1/
+2. https://www.udemy.com/course/certified-kubernetes-administrator-with-practice-tests/

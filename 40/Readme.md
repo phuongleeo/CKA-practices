@@ -117,7 +117,7 @@ $etcdctl --cacert=/etc/kubernetes/pki/etcd/ca.crt --cert=/etc/kubernetes/pki/etc
         1. kubeadm
 
            ```shell
-           $kubeadm join phase control-plane-join etcd --control-plane
+           $kubeadm join phase control-plane-join etcd --control-plane --apiserver-advertise-address={{master ip address}}
            ```
 
         2. Modify the [kubeadmcfg](../Vagrant/kubeadmcfg.yaml) to approriate master ip address

@@ -24,7 +24,7 @@ $sudo nginx -s reload
 
 - On Master-1 node
 
-  - Noted: As we're using Vagrant with VirtualBox to provision cluster, thus VMs contain of 2 VNIC ( nat + private network). Therefor performing `kubeadm init` command, we must sepecify ip address of VM at `apiserver-advertise-address` parameter ( resolved link [here](https://github.com/kubernetes/kubeadm/issues/1359#issuecomment-619564221)), otherwise your additional master node could not joined cluster.
+  - Noted: As we're using Vagrant with VirtualBox to provision cluster, thus VMs contain of 2 VNIC ( nat + private network). Therefor prior to perform `kubeadm init` command, we must sepecify ip address of VM at `apiserver-advertise-address` parameter ( resolved link [here](https://github.com/kubernetes/kubeadm/issues/1359#issuecomment-619564221)), otherwise your additional master node could not joined cluster.
 
   On Additional master: must also sepecify `apiserver-advertise-address` parameter when joining cluster ( check example below)
 

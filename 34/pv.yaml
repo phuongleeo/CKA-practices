@@ -29,7 +29,7 @@ spec:
   volumes:
     - name: foo-pvc
       persistentVolumeClaim:
-        claimName: foo-pv
+        claimName: pv-volume
   dnsPolicy: ClusterFirst
   restartPolicy: Always
 status: {}
