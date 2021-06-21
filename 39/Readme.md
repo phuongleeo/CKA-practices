@@ -29,7 +29,7 @@ $sudo nginx -s reload
   On Additional master: must also sepecify `apiserver-advertise-address` parameter when joining cluster ( check example below)
 
 ```shell
-$kubeadm init --apiserver-advertise-address="192.168.50.11" --apiserver-cert-extra-sans="192.168.50.11" --apiserver-cert-extra-sans="192.168.50.12" --apiserver-cert-extra-sans="192.168.50.13" --node-name master-1 --pod-network-cidr=192.168.0.0/216 --control-plane-endpoint="192.168.50.10:6443" --upload-certs
+$kubeadm init --apiserver-advertise-address="192.168.50.11" --apiserver-cert-extra-sans="192.168.50.11" --apiserver-cert-extra-sans="192.168.50.12" --apiserver-cert-extra-sans="192.168.50.13" --node-name master-1 --pod-network-cidr=192.168.0.0/16 --control-plane-endpoint="192.168.50.10:6443" --upload-certs
 
 You can now join any number of the control-plane node running the following command on each as root:
 

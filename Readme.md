@@ -76,7 +76,7 @@ kubeadm init phase kubeconfig admin --apiserver-advertise-address x.x.x.x --apis
 
 - Setup HA cluster
 
-[39](39/Readme.md)
+  [39](39/Readme.md)
 
 ## Alias
 
@@ -90,6 +90,19 @@ alias kgn="k get nodes"
 alias kgs="k get svc"
 alias kge="k get events --sort-by='.metadata.creationTimestamp' |tail -8"
 export ETCDCTL_API=3
+export do="--dry-run=client -o yaml"
+```
+
+Edit `.vimrc`
+
+```shell
+filetype plugin indent on
+" show existing tab with 2 spaces width
+set tabstop=2
+" when indenting with '>', use 2 spaces width
+set shiftwidth=2
+" On pressing tab, insert 2 spaces
+set expandtab
 ```
 
 # Material Resources
