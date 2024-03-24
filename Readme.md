@@ -21,14 +21,21 @@ These tasks are required a minikube cluster and a real running cluster ( EKS for
 ```json
 {
   "cni": "calico",
-  "cpus": "4",
-  "driver": "hyperkit",
-  "install-addons": ["registry-creds", "ingress"],
-  "kubernetes-version": "v1.20.2",
-  "memory": "4g",
+  "container-runtime": "containerd",
+  "cpus": "8",
+  "driver": "virtualbox",
+  "install-addons": [
+      "registry-creds",
+      "ingress",
+      "metallb",
+      "gvisor",
+      "metrics-server"
+  ],
+  "memory": "8192",
   "network-plugin": "cni",
-  "nodes": "2"
+  "nodes": 3
 }
+
 ```
 
 # EKS
