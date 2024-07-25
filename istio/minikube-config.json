@@ -1,0 +1,17 @@
+{
+    "cni": "calico",
+    "container-runtime": "containerd",
+    "cpus": "8",
+    "driver": "virtualbox",
+    "install-addons": [
+        "registry-creds",
+        "ingress",
+        "metallb",
+        "gvisor",
+        "metrics-server",
+        "csi-hostpath-driver"
+    ],
+    "memory": "8192",
+    "network-plugin": "cni",
+    "nodes": 3
+}

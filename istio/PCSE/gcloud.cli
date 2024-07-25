@@ -1,0 +1,186 @@
+#
+gcloud config set compute/region us-east4
+gcloud config set compute/zone us-east4-a
+export REGION=us-east4 ZONE=us-east4-a
+export PROJECT_ID=$(gcloud config get-value project)
+export ZONE=$(gcloud config get-value compute/zone)
+1. Create VM
+gcloud compute instances create gcelab --zone=$ZONE --machine-type=e2-medium --network-interface=network-tier=PREMIUM,stack-type=IPV4_ONLY,subnet=default \
+--tags=http-server \
+--image-project=debian-cloud \
+--image-family=debian-11 \
+--metadata=startup-script='#!/bin/bash
+  apt-get update
+  apt-get install nginx -y'
+  echo "
+<h3>Web Server: www1</h3>" | tee /var/www/html/index.html'
+
+
+## Instance template
+gcloud compute instance-templates create lb-backend-template \
+   --region=us-central1 \
+   --network=default \
+   --subnet=default \
+   --tags=allow-health-check \
+   --machine-type=e2-medium \
+   --image-family=debian-11 \
+   --image-project=debian-cloud \
+   --metadata=startup-script='#!/bin/bash
+     apt-get update
+     apt-get install apache2 -y
+     a2ensite default-ssl
+     a2enmod ssl
+     vm_hostname="$(curl -H "Metadata-Flavor:Google" \
+     http://169.254.169.254/computeMetadata/v1/instance/name)"
+     echo "Page served from: $vm_hostname" | \
+     tee /var/www/html/index.html
+     systemctl restart apache2'
+
+2. modify network tags
+gcloud compute instances add-tags gcelab2 --tags http-server,https-server
+
+3. firewall
+gcloud compute firewall-rules create default-allow-http --direction=INGRESS --priority=1000 --network=default --action=ALLOW --rules=tcp:80 --source-ranges=0.0.0.0/0 --target-tags=http-server
+
+4. Logging
+gcloud logging read "resource.type=gce_instance" --limit 5
+
+
+6. MIG
+gcloud compute instance-groups managed create lb-backend-group \
+   --template=lb-backend-template --size=2 --zone=us-central1-a
+
+5. HTTP LB
+gcloud compute addresses create network-lb-ip-1 \
+  --region us-central1
+gcloud compute http-health-checks create basic-check
+gcloud compute target-pools create www-pool \
+  --region us-central1 --http-health-check basic-check
+gcloud compute forwarding-rules create www-rule \
+    --region  us-central1 \
+    --ports 80 \
+    --address network-lb-ip-1 \
+    --target-pool www-pool
+gcloud compute backend-services create web-backend-service \
+  --protocol=HTTP \
+  --port-name=http \
+  --http-health-checks=basic-check \
+  --global
+gcloud compute backend-services add-backend web-backend-service \
+  --instance-group=lb-backend-group \
+  --instance-group-zone=us-central1-a \
+  --global
+gcloud compute url-maps create web-map-http \
+    --default-service web-backend-service
+gcloud compute target-http-proxies create http-lb-proxy \
+    --url-map web-map-http
+gcloud compute forwarding-rules create http-content-rule \
+   --address=lb-ipv4-1\
+   --global \
+   --target-http-proxy=http-lb-proxy \
+   --ports=80
+
+### IAM
+gcloud iam list-testable-permissions //cloudresourcemanager.googleapis.com/projects/$DEVSHELL_PROJECT_ID
+
+# Custom role.yaml
+- via file
+title: "Role Editor"
+description: "Edit access for App Versions"
+stage: "ALPHA"
+includedPermissions:
+- appengine.versions.create
+- appengine.versions.delete
+
+gcloud iam roles create orca_storage_editor_865 --project $DEVSHELL_PROJECT_ID \
+--file role-definition.yaml
+
+- via cli
+gcloud iam roles create viewer --project $DEVSHELL_PROJECT_ID \
+--title "Role Viewer" --description "Custom role description." \
+--permissions compute.instances.get,compute.instances.list --stage ALPHA
+
+# update new roles
+gcloud iam roles update viewer --project $DEVSHELL_PROJECT_ID \
+--add-permissions storage.buckets.get,storage.buckets.list
+
+# undelete
+gcloud iam roles undelete viewer --project $DEVSHELL_PROJECT_ID
+
+
+### Challenge lab
+- create custom role
+nano challengelabw2.yaml
+title: "orca_storage_editor_865"
+description: "Challenge lab"
+stage: "ALPHA"
+includedPermissions:
+- storage.buckets.get
+- storage.objects.get
+- storage.objects.list
+- storage.objects.update
+- storage.objects.create
+
+gcloud iam roles create orca_storage_editor_865 --project $DEVSHELL_PROJECT_ID \
+--file challengelabw2.yaml
+
+- create SA
+gcloud iam service-accounts create orca-private-cluster-427-sa --display-name "orca-private-cluster-427-sa"
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+    --member serviceAccount:orca-private-cluster-427-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role roles/orca_storage_editor_865
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+    --member serviceAccount:orca-private-cluster-427-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role roles/monitoring.viewer
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+    --member serviceAccount:orca-private-cluster-427-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role roles/monitoring.metricWriter
+gcloud projects add-iam-policy-binding $DEVSHELL_PROJECT_ID \
+    --member serviceAccount:orca-private-cluster-427-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com --role roles/logging.logWriter
+
+- create jumphost
+gcloud compute instances create orca-jumphost --zone=$ZONE --scopes 'https://www.googleapis.com/auth/cloud-platform' \
+-network-interface=stack-type=IPV4_ONLY,subnet=orca-mgmt-subnet
+
+
+- create private GKE
+gcloud beta container clusters create orca-cluster-659 \
+    --enable-private-nodes \
+    --master-ipv4-cidr 172.16.0.16/28 \
+    --enable-ip-alias \
+    --enable-private-endpoint \
+    --network "orca-build-vpc" \
+    --subnetwork "orca-build-subnet" \
+    --service-account orca-private-cluster-427-sa@$DEVSHELL_PROJECT_ID.iam.gserviceaccount.com \
+    --enable-master-authorized-networks \
+    --master-authorized-networks "192.168.10.2/32"
+
+gcloud container clusters update private-cluster \
+    --enable-master-authorized-networks \
+    --master-authorized-networks [MY_EXTERNAL_RANGE]
+
+
+### Secure network
+- create network + subnets
+gcloud compute networks create managementnet --project=qwiklabs-gcp-04-cf5c5281590f --subnet-mode=custom --mtu=1460 --bgp-routing-mode=regional
+gcloud compute networks subnets create managementsubnet-us --project=qwiklabs-gcp-04-cf5c5281590f --range=10.130.0.0/20 --stack-type=IPV4_ONLY --network=managementnet --region=us-west1
+gcloud compute firewall-rules create app-allow-http --direction=INGRESS --priority=1000 --network=my-internal-app --action=ALLOW --rules=tcp:80 --source-ranges=0.0.0.0/0 --target-tags=http-server
+gcloud compute firewall-rules create app-allow-health-check --direction=INGRESS --priority=1000 --action=ALLOW --rules=tcp --source-ranges=130.211.0.0/22,35.191.0.0/16 --target-tags=lb-backend
+
+
+-
+gcloud compute instance-templates create instance-template-2 \
+ --machine-type=e2-medium \
+ --network-interface=network-tier=PREMIUM,subnet=subnet-b \
+ --tags=lb-backend \
+ --metadata=startup-script-url=gs://cloud-training/gcpnet/ilb/startup.sh,enable-oslogin=true \
+  --region=us-west1
+
+gcloud beta compute instance-groups managed create europe-west1-mig \
+--base-instance-name=europe-west1-mig --template=projects/qwiklabs-gcp-03-a1dc65e13395/global/instanceTemplates/europe-west1-template \
+--size=1 --zones=europe-west1-c,europe-west1-b,europe-west1-d
+gcloud beta compute instance-groups managed set-autoscaling europe-west1-mig \ --region=europe-west1 --mode=on --min-num-replicas=1 --max-num-replicas=2 --target-cpu-utilization=0.8 --cool-down-period=45
+
+---
+curl -s \
+  -H "Authorization: Bearer $(gcloud auth print-access-token)" \
+  -H "Content-Type: application/json" \
+  https://dlp.googleapis.com/v2/projects/$PROJECT_ID/content:deidentify \
+  -d @redact-request.json -o redact-response.txt

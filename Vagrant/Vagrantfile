@@ -1,16 +1,16 @@
 IMAGE_NAME = "ubuntu/xenial64"
 N = 2
 ENV["LC_ALL"] = "en_US.UTF-8"
-KUBELET_VERSION="1.21.1-00"
-KUBEADM_VERSION="1.21.1-00"
-KUBECTL_VERSION="1.21.1-00"
+KUBELET_VERSION="1.28.11-00"
+KUBEADM_VERSION="1.28.11-00"
+KUBECTL_VERSION="1.28.11-00"
 Vagrant.configure("2") do |config|
     config.ssh.insert_key = false
     config.vm.provider "virtualbox" do |v|
         v.memory = 2048
         v.cpus = 2
         v.linked_clone = true
-    config.vbguest.auto_update = false
+    #config.vbguest.auto_update = false
     end
 
     config.vm.define "k8s-master" do |master|

@@ -1,0 +1,32 @@
+pipeline {
+    agent {
+        kubernetes {
+        defaultContainer 'jnlp'
+        yaml """
+            apiVersion: v1
+            kind: Pod
+            metadata:
+            labels:
+            component: ci
+            spec:
+            # Use service account that can deploy to all namespaces
+            serviceAccountName: jenkins
+            containers:
+            - name: python
+                image: python:3.9.19-alpine3.19
+                command:
+                - cat
+                tty: true
+        """
+        }
+    }
+    stages {
+        stage('test') {
+            steps {
+            container('python'){
+                sh 'python -V'
+            }
+            }
+        }
+    }
+}
