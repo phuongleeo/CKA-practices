@@ -1,0 +1,47 @@
+{{- range .Values.gateway }}
+{{ $namespace := .namespace }}
+{{- range .ingress }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: {{ .name }}
+  namespace: {{ $namespace }}
+spec:
+  selector:
+    {{- toYaml .selector | nindent 4 }}
+  servers:
+    {{- range .ports }}
+    {{- if or (eq .protocol "HTTPS") (eq .protocol "TLS") }}
+    - port:
+        number: {{ .number }}
+        name: {{ .name }}
+        protocol: {{ .protocol }}
+      tls:
+        {{- toYaml .tls | nindent 8 }}
+      hosts:
+      {{- range .hosts }}
+        - {{ . }}
+      {{- end }}
+      {{- else if eq .protocol "HTTP" }}
+    - port:
+        number: {{ .number }}
+        name: {{ .name }}
+        protocol: {{ .protocol }}
+      hosts:
+      {{- range .hosts }}
+        - {{ . }}
+      {{- end }}
+      {{ else }}
+    - port:
+        number: {{ .number }}
+        name: {{ .name }}
+        protocol: {{ .protocol }}
+      hosts:
+      {{- range .hosts }}
+        - {{ . }}
+      {{- end }}
+      {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

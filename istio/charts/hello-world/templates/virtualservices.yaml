@@ -1,0 +1,235 @@
+{{ range .Values.egress }}
+{{ $namespace := .namespace }}
+{{ range $rules := .rules }}
+{{ $gateway := .gateway }}
+{{ $port := .port }}
+{{- if ne (.range | toString) "true" }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  {{- if .name_protocol }}
+  name: direct-svc-through-egress-gateway-{{ .name_protocol }}
+  {{- else }}
+  name: direct-svc-through-egress-gateway-{{ .protocol }}-{{ .port }}
+  {{- end }}
+  namespace: {{ $namespace }}
+spec:
+  hosts:
+  {{- range .hosts }}
+    {{- if hasPrefix "." . }}
+    - {{ print "*" . | quote }}
+    {{- else }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  gateways:
+    - mesh
+  exportTo:
+  {{- if .exportTo }}
+    {{- range .exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- else }}
+    - istio-system
+    - {{ $namespace }}
+  {{- end }}
+  {{- if eq .protocol "https" }}
+  tls:
+  {{- else }}
+  {{ .protocol }}:
+  {{- end }}
+    - match:
+      - gateways:
+          - mesh
+        port: {{ .port }}
+        {{- if eq .protocol "https" }}
+        sniHosts:
+        {{- range .hosts }}
+          {{- if hasPrefix "." . }}
+          - {{ print "*" . | quote }}
+          {{- else }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+      route:
+        - destination:
+            host: {{ .destination | quote }}
+            port:
+              number: {{ .port }}
+  {{ $protocol := .protocol }}
+  {{ $exportTo := .exportTo }}
+  {{ range .hosts }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  {{- if $rules.name_protocol }}
+  name: egress-{{ . | replace "." "-" | replace "*" "-" | trunc 56 }}-{{ $rules.name_protocol }}
+  {{- else }}
+  name: egress-{{ . | replace "." "-" | replace "*" "-" | trunc 56 }}-{{ $protocol }}
+  {{- end }}
+  namespace: {{ $namespace }}
+spec:
+  hosts:
+    {{- if hasPrefix "." . }}
+    - {{ print "*" . | quote }}
+    {{- else }}
+    - {{ . | quote }}
+    {{- end }}
+  gateways:
+    - {{ $gateway }}
+  exportTo:
+  {{- if $exportTo }}
+    {{- range $exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- else }}
+    - istio-system
+    - {{ $namespace }}
+  {{- end }}
+  {{- if eq $protocol "https" }}
+  tls:
+  {{- else }}
+  {{ $protocol }}:
+  {{- end }}
+    - match:
+      - gateways:
+          - {{ $gateway }}
+        port: {{ $port }}
+        {{- if eq $protocol "https" }}
+        sniHosts:
+          {{- if hasPrefix "." . }}
+          - {{ print "*" . | quote }}
+          {{- else }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- end }}
+      route:
+        - destination:
+            {{- if eq . ".googleapis.com"}}
+            host: private.googleapis.com
+            {{- else }}
+            host: {{ . }}
+            {{- end }}
+            port:
+              number: {{ $port }}
+  {{- end }}
+{{ else }}
+{{ $exportTo := .exportTo }}
+{{ $from_port := .from_port | int }}
+{{ $to_port := add .to_port 1 | int }}
+{{- range untilStep $from_port $to_port 1 }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  {{- if $rules.name_protocol }}
+  name: direct-svc-through-egress-gateway-{{ $rules.name_protocol }}-{{ . }}
+  {{- else }}
+  name: direct-svc-through-egress-gateway-{{ $rules.protocol }}-{{ . }}
+  {{- end }}
+  namespace: {{ $namespace }}
+spec:
+  hosts:
+  {{- range $rules.hosts }}
+    {{- if hasPrefix "." . }}
+    - {{ print "*" . | quote }}
+    {{- else }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- end }}
+  gateways:
+    - mesh
+  exportTo:
+  {{- if $exportTo }}
+    {{- range $exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- else }}
+    - istio-system
+    - {{ $namespace }}
+  {{- end }}
+  {{- if eq $rules.protocol "https" }}
+  tls:
+  {{- else }}
+  {{ $rules.protocol }}:
+  {{- end }}
+    - match:
+      - gateways:
+          - mesh
+        port: {{ . }}
+        {{- if eq $rules.protocol "https" }}
+        sniHosts:
+        {{- range .hosts }}
+          {{- if hasPrefix "." . }}
+          - {{ print "*" . | quote }}
+          {{- else }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- end }}
+        {{- end }}
+      route:
+        - destination:
+            host: {{ $rules.destination | quote }}
+            port:
+              number: {{ . }}
+  {{ $protocol := $rules.protocol }}
+  {{- $port_range := . }}
+  {{ range $rules.hosts }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: egress-{{ . | replace "." "-" | replace "*" "-" | trunc 56 }}-{{ $protocol }}-{{ $port_range }}
+  namespace: {{ $namespace }}
+spec:
+  hosts:
+    {{- if hasPrefix "." . }}
+    - {{ print "*" . | quote }}
+    {{- else }}
+    - {{ . | quote }}
+    {{- end }}
+  gateways:
+    - {{ $gateway }}
+  exportTo:
+  {{- if $exportTo }}
+    {{- range $exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- else }}
+    - istio-system
+    - {{ $namespace }}
+  {{- end }}
+  {{- if eq $protocol "https" }}
+  tls:
+  {{- else }}
+  {{ $protocol }}:
+  {{- end }}
+    - match:
+      - gateways:
+          - {{ $gateway }}
+        port: {{ $port_range }}
+        {{- if eq $protocol "https" }}
+        sniHosts:
+          {{- if hasPrefix "." . }}
+          - {{ print "*" . | quote }}
+          {{- else }}
+          - {{ . | quote }}
+          {{- end }}
+        {{- end }}
+      route:
+        - destination:
+            {{- if eq . ".googleapis.com"}}
+            host: private.googleapis.com
+            {{- else }}
+            host: {{ . }}
+            {{- end }}
+            port:
+              number: {{ $port_range }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}

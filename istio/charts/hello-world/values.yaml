@@ -27,3 +27,40 @@ service:
   port: 80
 deployEnv: "prod"
 customIndex: true
+
+gateway:
+  - namespace: istio-system
+    ingress:
+      - name: istio-ingressgateway
+        selector:
+          service.istio.io/canonical-name: istio-ingressgateway
+        ports:
+          - protocol: HTTPS
+            number: 443
+            name: https
+            tls:
+              credentialName: ingress-gw-tls
+              mode: SIMPLE
+            hosts:
+              - '"*"'
+    egress:
+      - name: istio-egressgateway
+        selector:
+          service.istio.io/canonical-name: istio-egressgateway
+        ports:
+          - protocol: TLS
+            number: 443
+            name: tls
+            tls:
+              mode: PASSTHROUGH
+            hosts:
+              - '"*"'
+egress:
+  - namespace: default
+    rules:
+      - protocol: https
+        port: 443
+        destination: istio-egressgateway.istio-system.svc.cluster.local
+        gateway: istio-system/istio-egressgateway
+        hosts:
+          - "vnexpress.net"

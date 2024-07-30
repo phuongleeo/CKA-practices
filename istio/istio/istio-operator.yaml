@@ -82,8 +82,8 @@ spec:
           my_tag_header:
             header:
               name: host
-    # outboundTrafficPolicy:
-    #   mode: REGISTRY_ONLY
+    outboundTrafficPolicy:
+      mode: REGISTRY_ONLY
     enableTracing: true
     enablePrometheusMerge: true
     extensionProviders:
