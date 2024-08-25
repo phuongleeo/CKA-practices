@@ -1,4 +1,4 @@
-{{- if ( default true .Values.enforceHooksAlwaysSync ) }}
+{{- if ( default false .Values.enforceHooksAlwaysSync ) }}
 ---
 apiVersion: v1
 kind: ConfigMap
