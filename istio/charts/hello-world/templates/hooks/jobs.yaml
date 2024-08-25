@@ -1,0 +1,91 @@
+---
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: "hook-{{ include "hello-world.fullname" $ }}"
+  labels:
+    {{- with $.Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.hooks.job.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  annotations:
+    # This is what defines this resource as a hook. Without this line, the
+    # job is considered part of the release.
+    "helm.sh/hook": "{{ .Values.hooks.job.types }}"
+    "helm.sh/hook-delete-policy": "{{ .Values.hooks.job.deletePolicy  }}"
+    "helm.sh/hook-weight": "{{ .Values.hooks.job.weight }}"
+    {{- with $.Values.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.hooks.job.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+spec:
+  backoffLimit: {{ .Values.hooks.job.backoffLimit }}
+  template:
+    metadata:
+      labels:
+        {{- with $.Values.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.hooks.job.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.hooks.job.container.labels }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+      annotations:
+        {{- if or $.Values.annotations .Values.hooks.job.annotations .Values.hooks.job.container.annotations }}
+        {{- with $.Values.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.hooks.job.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- with .Values.hooks.job.container.annotations }}
+        {{- toYaml . | nindent 8 }}
+        {{- end }}
+        {{- end }}
+    spec:
+      {{- if .Values.hooks.job.imagePullSecrets }}
+      imagePullSecrets:
+      {{- with .Values.hooks.job.imagePullSecrets }}
+        {{- toYaml . | nindent 8 }}
+      {{- end }}
+      {{- end }}
+      {{- if .Values.hooks.job.runAsUser  }}
+      {{- $runAsNonRoot := dict "runAsNonRoot" true "runAsUser" .Values.hooks.job.runAsUser }}
+      securityContext:
+        {{- toYaml ( merge $runAsNonRoot .Values.hooks.job.securityContext ) | nindent 8 }}
+      {{- else }}
+      {{- fail "User id must greater than 0." }}
+      {{- end }}
+      restartPolicy: "{{ .Values.hooks.job.restartPolicy }}"
+      {{- if .Values.volume }}
+      volumes:
+        - name: {{ .Values.volume.name }}
+          persistentVolumeClaim:
+            claimName: {{ .Values.volume.name }}
+      {{- end }}
+      containers:
+        - name: "hook-{{ include "hello-world.fullname" $ }}"
+          {{- if .Values.volume }}
+          volumeMounts:
+            - name: {{ .Values.volume.name }}
+              mountPath: /mnt
+          {{- end }}
+          {{- if .Values.hooks.job.container.image.repository }}
+          {{- if .Values.hooks.job.container.image.registry }}
+          image: "{{ .Values.hooks.job.container.image.registry }}/{{ .Values.hooks.job.container.image.repository }}:{{ .Values.hooks.job.container.image.tag }}"
+          {{- else }}
+          image: "{{ .Values.hooks.job.container.image.repository }}:{{ .Values.hooks.job.container.image.tag }}"
+          {{- end }}
+          {{- end }}
+          {{- if .Values.hooks.job.container.command }}
+          command: [ {{ join "," .Values.hooks.job.container.command }} ]
+          {{- end }}
+          {{- if .Values.hooks.job.container.args }}
+          args: [ {{ join "," .Values.hooks.job.container.args }} ]
+          {{- end }}

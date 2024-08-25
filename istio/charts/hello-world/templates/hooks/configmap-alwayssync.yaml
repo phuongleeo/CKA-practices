@@ -1,0 +1,11 @@
+{{- if ( default true .Values.enforceHooksAlwaysSync ) }}
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: {{ printf "hook-%s-alwayssync-cm" (include "hello-world.fullname" $) | quote }}
+  labels:
+  annotations:
+    # This will create a dummy configmap which will be deployed along with new release
+    timestamp: {{ now | toString | nospace | trunc 18 | replace ":" "-" | quote }}
+{{- end }}

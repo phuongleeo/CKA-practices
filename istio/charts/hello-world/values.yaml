@@ -64,3 +64,180 @@ egress:
         gateway: istio-system/istio-egressgateway
         hosts:
           - "vnexpress.net"
+volume:
+  name: myclaim
+  storageClassName: csi-hostpath-sc
+  hostPath: /data
+  capacity: 100Mi
+hooks:
+  # -- This is for reference only. DO NOT enable or change values inside or bring it to your app chart. TIP: You can copy the content of this hook to define your own hook. Then you can clean the optional attributes or things that you don't need. Lastly, supply the values to required and necessary attributes.
+  # @default -- `hooks._`
+  # -- [required] [boolean] To create hook job and related stuff.
+  enabled: false
+  # -- [required] NOTICE: `job.enabled` is not supported here. Use `hooks.<hook id>.enabled` instead.
+  # @default -- `hooks._.job`
+  job:
+    # -- [optional] backoffLimit for job
+    backoffLimit: 5
+    # -- [optional] can be either "Never" or "OnFailure"
+    restartPolicy: "OnFailure"
+    # -- [optional] hook types determine when the job is run (check Helm documentation)
+    types: "pre-install,pre-upgrade,pre-rollback"
+    # -- [optional] decides how migration job is cleaned up (check Helm documentation)
+    deletePolicy: "hook-succeeded,before-hook-creation"
+    # -- [optional] decides the order in which resources are created. 0 is default, resources that should be created before the deployment need a lower (negative) weight
+    weight: "0"
+    # -- [optional] securityContext for hook job (check Kubernetes documentation)
+    securityContext: {}
+    # -- [optional] nodeSelector for hook job (check Kubernetes documentation)
+    nodeSelector: {}
+    # -- [optional] affinity for hook job (check Kubernetes documentation)
+    affinity: {}
+    # -- [optional] tolerations for hook job (check Kubernetes documentation)
+    tolerations: []
+    # -- [optional] additional labels set on hook job object
+    labels: {}
+    # -- [optional] additional annotations set on hook job object
+    annotations:
+      sidecar.istio.io/inject: "false"
+    # -- [optional] imagePullSecrets neede by hook job (check Kubernetes documentation)
+    imagePullSecrets: []
+    # -- [optional] User to run job as numberic. Default 901 (appuser)
+    runAsUser: 901
+    # -- [optional] dnsConfig
+    dnsConfig:
+      options:
+      - name: ndots
+        value: "1"
+    # -- [optional] dnsPolicy
+    dnsPolicy: ClusterFirst
+    # -- [required] container settings
+    # @default -- `hooks._.job.container`
+    container:
+      # -- [required] registry/repository:tag
+      image:
+        # -- by default, the same docker registry is taken as the one defined in the deployment (but you can override it here)
+        registry: "docker.io"
+        # -- by default, the same docker image is taken as the one defined in the deployment (but you can override it here)
+        repository: "busybox"
+        # -- by default, the same docker tag is taken as the one defined in the deployment (but you can override it here)
+        tag: "latest"
+        # -- [optional] image pull policy
+        pullPolicy: "IfNotPresent"
+      # -- [optional] custom command
+      command: [date]
+      # -- [optional] custom args
+      args: []
+      # -- [optional] security context for this container
+      securityContext: {}
+      # -- [optional] secrets that should be exposed as environment variables (Check README for details)
+      secretEnv: []
+      # -- [optional] Skip adding secrets that are missing keys in secrets file yaml
+      optionalSecrets: true
+      # -- [optional] additional environment variables that should be exposed to the container
+      env: []
+      # -- [optional] second block of secrets that should be exposed as environment variables (Check README for details)
+      secretSubEnv: []
+      # -- [optional] second block of additional environment variables that should be exposed to the container
+      subEnv: []
+      # -- [optional] cpu/memory resources and limits (check Kubernetes documentation)
+      resources: {}
+      # -- [optional] labels specified on the job, are also put on the container by the default. Use this section for labels that should be applied ONLY to the container (and not the job itself)
+      labels: {}
+      # -- [optional] annotations specified on the job, are also put on the container by the default. Use this section for annotations that should be applied ONLY to the container (and not the deployment)
+      annotations: {}
+      # -- [optional] User to run job as numberic. Default 901 (appuser)
+      runAsUser: 901
+  # -- [optional] To create or re-use the pre-defined service account.
+  # @default -- `hooks._.serviceAccount`
+  serviceAccount:
+    # -- enable creation of dedicated service account for job
+    create: false
+    # -- override name of created service account. By default, the name is generated in the form of hook-{application name}.
+    name: ""
+    # -- [optional] hook types determine when the job is run (check Helm documentation)
+    types: "pre-install,pre-upgrade,pre-rollback"
+    # -- [optional] decides how migration job is cleaned up (check Helm documentation)
+    deletePolicy: "hook-succeeded,before-hook-creation"
+    # -- [optional] decides the order in which resources are created. 0 is default, resources that should be created before the deployment need a lower (negative) weight
+    weight: "-5"
+    # -- [optional] additional annotations set on service account
+    annotations: {}
+    # -- [optional] additional labels set on service account
+    labels: {}
+  # -- [optional] Secrets declaration
+  # @default -- `hooks._.secrets`
+  secrets:
+    # -- [required] secrets key/value pairs that can be exposed to the hook job (Check README for details)
+    values: {}
+    # -- [optional] second block of secrets key/value pairs that can be exposed to the hook job (Check README for details)
+    subValues: {}
+    # -- [optional] additional labels set on secret object which is created specifically for the hook job
+    labels: {}
+    # -- [optional] additional annotations set on secret object which is created specifically for the hook job
+    annotations: {}
+    # -- [optional] hook types determine when the secret is created (check Helm documentation)
+    types: "pre-install,pre-upgrade,pre-rollback"
+    # -- [optional] decides how the secret is cleaned up (check Helm documentation)
+    deletePolicy: "hook-succeeded,before-hook-creation,hook-failed"
+    # -- [optional] decides the order in which resources are created. 0 is default, resources that should be created before the deployment need a lower (negative) weight. We default to -5 here, to make sure it gets created before the job
+    weight: "-5"
+  # -- [optional] Secret files declaration
+  # @default -- `hooks._.secretFiles`
+  secretFiles:
+    # -- secrets key/value pairs that can be exposed to the deployment as files. (Check README for details)
+    values: {}
+    # -- [optional] additional labels set on secret object
+    labels: {}
+    # -- [optional] additional annotations set on secret object
+    annotations: {}
+    # -- [optional] default file mode
+    defaultMode: 0400
+    # -- [optional] default path
+    defaultPath: "/etc/app-secrets"
+    # -- [optional] hook types determine when the secret is created (check Helm documentation)
+    types: "pre-install,pre-upgrade,pre-rollback"
+    # -- [optional] decides how the secret is cleaned up (check Helm documentation)
+    deletePolicy: "hook-succeeded,before-hook-creation,hook-failed"
+    # -- [optional] decides the order in which resources are created. 0 is default, resources that should be created before the deployment need a lower (negative) weight. We default to -5 here, to make sure it gets created before the job
+    weight: "-5"
+  # -- [optional] Configmap declaration
+  # @default -- `hooks._.configmap`
+  configmap:
+    # -- configmap key/value pairs that can be exposed to the deployment (Check README for details)
+    values: {}
+    # -- [optional] second block of configmap key/value pairs that can be exposed to the deployment (Check README for details)
+    subValues: {}
+    # -- [optional] additional labels set on configmap object
+    labels: {}
+    # -- [optional] additional annotations set on configmap object
+    annotations: {}
+    # -- [optional] protects you from accidental (or unwanted) updates that could cause applications outages
+    immutable: false
+    # -- [optional] hook types determine when the configmap is created (check Helm documentation)
+    types: "pre-install,pre-upgrade,pre-rollback"
+    # -- [optional] decides how the configmap is cleaned up (check Helm documentation)
+    deletePolicy: "hook-succeeded,before-hook-creation,hook-failed"
+    # -- [optional] decides the order in which resources are created. 0 is default, resources that should be created before the deployment need a lower (negative) weight. We default to -5 here, to make sure it gets created before the job
+    weight: "-5"
+  # -- [optional] Configmap files declaration
+  # @default -- `hooks._.configmapFiles`
+  configmapFiles:
+    # -- configmap key/value pairs that can be exposed to the deployment as files. (Check README for details)
+    values: {}
+    # -- [optional] additional labels set on configmap object
+    labels: {}
+    # -- [optional] additional annotations set on configmap object
+    annotations: {}
+    # -- [optional] default readOnly
+    readOnly: true
+    # -- [optional] default path - mount configmap to this path inside pod
+    mountPath: "/etc/app-configmap"
+    # -- [optional] protects you from accidental (or unwanted) updates that could cause applications outages
+    immutable: false
+    # -- [optional] hook types determine when the configmapFiles is created (check Helm documentation)
+    types: "pre-install,pre-upgrade,pre-rollback"
+    # -- [optional] decides how the configmapFiles is cleaned up (check Helm documentation)
+    deletePolicy: "hook-succeeded,before-hook-creation,hook-failed"
+    # -- [optional] decides the order in which resources are created. 0 is default, resources that should be created before the deployment need a lower (negative) weight. We default to -5 here, to make sure it gets created before the job
+    weight: "-5"

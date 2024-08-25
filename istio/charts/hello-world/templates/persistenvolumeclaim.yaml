@@ -1,12 +1,14 @@
+{{- if .Values.volume }}
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
-  name: myclaim
+  name: {{ .Values.volume.name }}
 spec:
   accessModes:
-    - ReadWriteOnce
+    - ReadOnlyMany
   volumeMode: Filesystem
   resources:
     requests:
-      storage: 100Mi
-  storageClassName: ""
+      storage: {{ .Values.volume.capacity }}
+  storageClassName: {{ .Values.volume.storageClassName }}
+{{- end -}}
