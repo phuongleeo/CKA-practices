@@ -1,0 +1,70 @@
+{{- range .Values.gateway }}
+{{- $namespace := .namespace }}
+{{- range .egress }}
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: {{ .name }}
+  namespace: {{ $namespace }}
+spec:
+  selector:
+    {{- toYaml .selector | nindent 4 }}
+  servers:
+    {{- range $port := .ports }}
+    {{- if ne (.range | toString) "true" }}
+      {{- if  or (eq .protocol "HTTPS") (eq .protocol "TLS") (eq .protocol "HTTP") }}
+    - port:
+        number: {{ .number }}
+        name: {{ .name }}
+        protocol: {{ .protocol }}
+      tls:
+        {{- toYaml .tls | nindent 8 }}
+      hosts:
+      {{- range .hosts }}
+      {{- if eq . ".googleapis.com"}}
+        - private.googleapis.com
+      {{- else }}
+        - {{ . }}
+      {{- end }}
+      {{- end }}
+      {{- else }}
+    - port:
+        number: {{ .number }}
+        name: {{ .name }}
+        protocol: {{ .protocol }}
+      hosts:
+      {{- range .hosts }}
+        - {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- else }}
+    {{- $from_num := .from_number | int }}
+    {{- $to_num := add .to_number 1 | int }}
+    {{- range untilStep $from_num $to_num 1 }}
+      {{- if  or (eq $port.protocol "HTTPS") (eq $port.protocol "TLS") (eq $port.protocol "HTTP") }}
+    - port:
+        number: {{ . }}
+        name: {{ $port.name }}
+        protocol: {{ $port.protocol }}
+      tls:
+        {{- toYaml $port.tls | nindent 8 }}
+      hosts:
+      {{- range .hosts }}
+        - {{ . }}
+      {{- end }}
+      {{- else }}
+    - port:
+        number: {{ . }}
+        name: {{ $port.name }}-{{ . }}
+        protocol: {{ $port.protocol }}
+      hosts:
+      {{- range $port.hosts }}
+        - {{ . }}
+      {{- end }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}

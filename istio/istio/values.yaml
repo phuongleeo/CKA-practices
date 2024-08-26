@@ -1,0 +1,83 @@
+gateway:
+  - namespace: argocd
+    ingress:
+      - name: istio-ingressgateway
+        selector:
+          service.istio.io/canonical-name: istio-ingressgateway
+        ports:
+          - protocol: HTTPS
+            number: 443
+            name: https
+            tls:
+              credentialName: argocd-server-tls
+              mode: SIMPLE
+            hosts:
+              - '"*"'
+    egress:
+      - name: istio-egressgateway
+        selector:
+          service.istio.io/canonical-name: istio-egressgateway
+        ports:
+          - protocol: TLS
+            number: 443
+            name: tls
+            tls:
+              mode: PASSTHROUGH
+            hosts:
+              - '"*"'
+  - namespace: jenkins
+    ingress:
+      - name: istio-ingressgateway
+        selector:
+          service.istio.io/canonical-name: istio-ingressgateway
+        ports:
+          - protocol: HTTPS
+            number: 443
+            name: https
+            tls:
+              credentialName: jenkins-server-tls
+              mode: SIMPLE
+            hosts:
+              - '"*"'
+    egress:
+      - name: istio-egressgateway
+        selector:
+          service.istio.io/canonical-name: istio-egressgateway
+        ports:
+          - protocol: TLS
+            number: 443
+            name: tls
+            tls:
+              mode: PASSTHROUGH
+            hosts:
+              - '"*"'
+egress:
+  - namespace: default
+    rules:
+      - protocol: https
+        port: 443
+        destination: istio-egressgateway.istio-system.svc.cluster.local
+        gateway: istio-system/istio-egressgateway
+        hosts:
+          - "vnexpress.net"
+  - namespace: argocd
+    rules:
+      - protocol: https
+        port: 443
+        destination: istio-egressgateway.istio-system.svc.cluster.local
+        gateway: istio-system/istio-egressgateway
+        hosts:
+          - "vnexpress.net"
+          - "github.com"
+          - "raw.githubusercontent.com"
+  - namespace: jenkins
+    rules:
+      - protocol: https
+        port: 443
+        destination: istio-egressgateway.istio-system.svc.cluster.local
+        gateway: istio-system/istio-egressgateway
+        hosts:
+          - "sg.mirror.servanamanaged.com"
+          - "mirror.freedif.org"
+          - "jenkins.io"
+          - "updates.jenkins.io"

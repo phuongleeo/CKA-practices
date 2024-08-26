@@ -1,0 +1,150 @@
+{{ range .Values.egress }}
+{{ $namespace := .namespace }}
+{{ range $rules := .rules }}
+{{- if ne (.range | toString) "true" }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  {{- if .name_protocol }}
+  name: service-entries-{{ .name_protocol }}
+  {{- else }}
+  name: service-entries-{{ .protocol }}-{{ .port }}
+  {{- end }}
+  namespace: {{ $namespace }}
+spec:
+  exportTo:
+  {{- if .exportTo }}
+    {{- range .exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- else }}
+    - istio-system
+    - {{ $namespace }}
+  {{- end }}
+  hosts:
+  {{- range .hosts }}
+    {{- if eq . ".googleapis.com"}}
+    - private.googleapis.com
+    {{- else }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  {{- if .addresses }}
+  addresses:
+  {{- range .addresses }}
+    - {{ . }}
+  {{- end }}
+  {{- end }}
+  location: MESH_EXTERNAL
+  ports:
+  - name: {{ .name_protocol | default .protocol }}
+    number: {{ .port }}
+    protocol: {{ .protocol | upper }}
+  resolution: {{ .resolution | default "DNS" }}
+  {{- if .endpoints }}
+  endpoints:
+  {{- with .endpoints }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{ else }} # i.e. 'range' is not false
+{{ $exportTo := .exportTo }}
+{{ $from_port := .from_port | int }}
+{{ $to_port := add .to_port 1 | int }}
+{{- range untilStep $from_port $to_port 1 }} # integer list
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  {{- if $rules.name_protocol }}
+  name: service-entries-{{ $rules.name_protocol }}
+  {{- else }}
+  name: service-entries-{{ $rules.protocol }}-{{ . }}
+  {{- end }}
+  namespace: {{ $namespace }}
+spec:
+  exportTo:
+  {{- if $exportTo }}
+    {{- range $exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- else }}
+    - istio-system
+    - {{ $namespace }}
+  {{- end }}
+  hosts:
+  {{- range $rules.hosts }}
+    {{- if eq . ".googleapis.com"}}
+    - private.googleapis.com
+    {{- else }}
+    - {{ . }}
+    {{- end }}
+  {{- end }}
+  {{- if $rules.addresses }}
+  addresses:
+  {{- range $rules.addresses }}
+    - {{ . }}
+  {{- end }}
+  {{- end }}
+  location: MESH_EXTERNAL
+  ports:
+  - name: {{ $rules.name_protocol | default $rules.protocol }}
+    number: {{ . }}
+    protocol: {{ $rules.protocol | upper }}
+  resolution: {{ $rules.resolution | default "DNS" }}
+  {{- if $rules.endpoints }}
+  endpoints:
+  {{- with $rules.endpoints }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- end }}
+{{- range .Values.serviceentry }}
+{{ $namespace := .namespace }}
+{{- range .services }}
+---
+apiVersion: networking.istio.io/v1beta1
+kind: ServiceEntry
+metadata:
+  name: {{ .name }}
+  namespace: {{ $namespace }}
+spec:
+  exportTo:
+  {{- if .exportTo }}
+    {{- range .exportTo }}
+    - {{ . | quote }}
+    {{- end }}
+  {{- else }}
+    - istio-system
+    - {{ $namespace }}
+  {{- end }}
+  hosts:
+  {{- range .hosts}}
+    - {{ . }}
+  {{- end }}
+  {{- if .addresses }}
+  addresses:
+  {{- range .addresses }}
+    - {{ . }}
+  {{- end }}
+  {{- end }}
+  location: {{ .location }}
+  ports:
+  {{- range .Ports }}
+  - name: {{ .name }}
+    number: {{ .number }}
+    protocol: {{ .protocol }}
+  {{- end }}
+  resolution: {{ .resolution }}
+  {{- if .endpoints }}
+  endpoints:
+  {{- with .endpoints }}
+    {{- toYaml . | nindent 4 }}
+  {{- end }}
+  {{- end }}
+{{- end }}
+{{- end }}
