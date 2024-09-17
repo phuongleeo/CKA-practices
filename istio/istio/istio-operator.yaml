@@ -74,6 +74,7 @@ spec:
   hub: docker.io/istio
   meshConfig:
     accessLogFile: /dev/stdout
+    accessLogEncoding: JSON
     defaultConfig:
       proxyMetadata: {}
       tracing:
