@@ -5,12 +5,30 @@ gateway:
         selector:
           service.istio.io/canonical-name: istio-ingressgateway
         ports:
+          - name: http
+            number: 80
+            protocol: HTTP
+            hosts:
+            - '"*"'
           - protocol: HTTPS
             number: 443
             name: https
             tls:
               credentialName: argocd-server-tls
               mode: SIMPLE
+              maxProtocolVersion: TLSV1_3
+              minProtocolVersion: TLSV1_2
+              cipherSuites:
+                - ECDHE-ECDSA-AES128-GCM-SHA256
+                - ECDHE-RSA-AES128-GCM-SHA256
+                - ECDHE-ECDSA-AES128-SHA
+                - AES128-GCM-SHA256
+                - AES128-SHA
+                - ECDHE-ECDSA-AES256-GCM-SHA384
+                - ECDHE-RSA-AES256-GCM-SHA384
+                - ECDHE-ECDSA-AES256-SHA
+                - AES256-GCM-SHA384
+                - AES256-SHA
             hosts:
               - '"*"'
     egress:
@@ -31,12 +49,74 @@ gateway:
         selector:
           service.istio.io/canonical-name: istio-ingressgateway
         ports:
+          - name: http
+            number: 80
+            protocol: HTTP
+            hosts:
+            - '"*"'
           - protocol: HTTPS
             number: 443
             name: https
             tls:
               credentialName: jenkins-server-tls
               mode: SIMPLE
+              maxProtocolVersion: TLSV1_3
+              minProtocolVersion: TLSV1_2
+              cipherSuites:
+                - ECDHE-ECDSA-AES128-GCM-SHA256
+                - ECDHE-RSA-AES128-GCM-SHA256
+                - ECDHE-ECDSA-AES128-SHA
+                - AES128-GCM-SHA256
+                - AES128-SHA
+                - ECDHE-ECDSA-AES256-GCM-SHA384
+                - ECDHE-RSA-AES256-GCM-SHA384
+                - ECDHE-ECDSA-AES256-SHA
+                - AES256-GCM-SHA384
+                - AES256-SHA
+            hosts:
+              - '"*"'
+    egress:
+      - name: istio-egressgateway
+        selector:
+          service.istio.io/canonical-name: istio-egressgateway
+        ports:
+          - protocol: TLS
+            number: 443
+            name: tls
+            tls:
+              mode: PASSTHROUGH
+            hosts:
+              - '"*"'
+  - namespace: demo
+    ingress:
+      - name: istio-ingressgateway
+        selector:
+          service.istio.io/canonical-name: istio-ingressgateway
+        ports:
+          - name: http
+            number: 80
+            protocol: HTTP
+            hosts:
+            - '"*"'
+          - protocol: HTTPS
+            number: 443
+            name: https
+            tls:
+              credentialName: demo-server-tls
+              mode: SIMPLE
+              maxProtocolVersion: TLSV1_3
+              minProtocolVersion: TLSV1_2
+              cipherSuites:
+                - ECDHE-ECDSA-AES128-GCM-SHA256
+                - ECDHE-RSA-AES128-GCM-SHA256
+                - ECDHE-ECDSA-AES128-SHA
+                - AES128-GCM-SHA256
+                - AES128-SHA
+                - ECDHE-ECDSA-AES256-GCM-SHA384
+                - ECDHE-RSA-AES256-GCM-SHA384
+                - ECDHE-ECDSA-AES256-SHA
+                - AES256-GCM-SHA384
+                - AES256-SHA
             hosts:
               - '"*"'
     egress:
@@ -81,3 +161,5 @@ egress:
           - "mirror.freedif.org"
           - "jenkins.io"
           - "updates.jenkins.io"
+virtualService:
+  enabled: false

@@ -1,0 +1,157 @@
+{{- if .Values.virtualService.enabled -}}
+apiVersion: {{ .Values.virtualService.apiVersion }}
+kind: VirtualService
+metadata:
+  name: {{ include "application.fullname" . }}-ingress
+  namespace: {{ .Release.Namespace }}
+  labels:
+    {{- include "application.labels" . | nindent 4 }}
+    {{- with .Values.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.virtualService.labels }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- if or .Values.annotations  .Values.virtualService.annotations }}
+  annotations:
+    {{- with .Values.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+    {{- with .Values.virtualService.annotations }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+spec:
+  {{- if or .Values.virtualService.hosts .Values.virtualService.defaultHosts }}
+  hosts:
+    {{- if .Values.virtualService.defaultHosts }}
+    {{- tpl (toYaml .Values.virtualService.defaultHosts) $ | nindent 4 }}
+    {{- end }}
+    {{- if .Values.virtualService.hosts }}
+    {{- tpl (toYaml .Values.virtualService.hosts) $ | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.virtualService.gateways }}
+  gateways:
+    {{- range .Values.virtualService.gateways }}
+    - {{ tpl . $ }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.virtualService.http }}
+  http:
+    {{- range .Values.virtualService.http }}
+    -
+    {{- range $http_k, $http_v := . }}
+      {{- if eq $http_k "name" }}
+      name: {{ tpl $http_v $ }}
+      {{- else if eq $http_k "route" }}
+      route:
+        {{- range $http_v }}
+        - destination:
+            {{ $_ := set .destination "Namespace" $.Release.Namespace }}
+            {{- if .destination.hostReleasePrefix -}}
+            host: {{ $.Release.Name }}-{{ tpl (include "application.virtualServiceDestHost" .) $ }}
+            {{- else }}
+            host: {{ include "application.virtualServiceDestHost" . }}
+            {{- end }}
+            {{- if .destination.port }}
+            port:
+              number: {{ .destination.port.number }}
+            {{- end }}
+          {{- if .weight }}
+          weight: {{ .weight }}
+          {{- end }}
+          {{- if $.Values.virtualService.enableDefaultHeaders }}
+          headers:
+            response:
+              add:
+                {{- $defaultReponseHeaders := dict "Referrer-Policy" "strict-origin-when-cross-origin" }}
+                {{- $_ := set $defaultReponseHeaders "Strict-Transport-Security" "max-age=63072000; includeSubdomains;" }}
+                {{- $_ := set $defaultReponseHeaders "X-Content-Type-Options" "nosniff" }}
+
+                {{- if not .headers }}
+                  {{- toYaml $defaultReponseHeaders | nindent 16 }}
+                {{- else if not .headers.response }}
+                  {{- toYaml $defaultReponseHeaders | nindent 16 }}
+                {{- else if not .headers.response.add }}
+                  {{- toYaml $defaultReponseHeaders | nindent 16 }}
+                {{- else }}
+                  {{- $responseHeaders := .headers.response.add }}
+                  {{- range $key, $value := $responseHeaders }}
+                  {{- if not (hasKey $defaultReponseHeaders $key) }}
+                {{ $key }}: {{ $value }}
+                  {{- end }}
+                  {{- end }}
+                  {{- range $key, $value := $defaultReponseHeaders }}
+                {{ $key }}: {{ index $responseHeaders $key | default $value }}
+                  {{- end }}
+                {{- end }}
+              {{- if .headers }}{{- if .headers.response }}{{- if .headers.response.set }}
+              set:
+                {{- toYaml .headers.response.set | nindent 16 }}
+              {{- end }}{{- end }}{{- end }}
+              {{- if .headers }}{{- if .headers.response }}{{- if .headers.response.remove }}
+              remove:
+                {{- toYaml .headers.response.remove | nindent 16 }}
+              {{- end }}{{- end }}{{- end }}
+            request:
+              add:
+                {{- $defaultRequestHeaders := dict "X-Request-Start" `'%START_TIME(%s.%3f)%'` }}
+                {{- if not .headers }}
+                  {{- toYaml $defaultRequestHeaders | nindent 16 }}
+                {{- else if not .headers.request }}
+                  {{- toYaml $defaultRequestHeaders | nindent 16 }}
+                {{- else if not .headers.request.add }}
+                  {{- toYaml $defaultRequestHeaders | nindent 16 }}
+                {{- else }}
+                  {{- $requestHeaders := .headers.request.add }}
+                  {{- range $key, $value := $requestHeaders }}
+                  {{- if not (hasKey $defaultRequestHeaders $key) }}
+                {{ $key }}: {{ $value }}
+                  {{- end }}
+                  {{- end }}
+                  {{- range $key, $value := $defaultRequestHeaders }}
+                {{ $key }}: {{ index $requestHeaders $key | default $value }}
+                  {{- end }}
+                {{- end }}
+              {{- if .headers }}{{- if .headers.request }}{{- if .headers.request.set }}
+              set:
+                {{- toYaml .headers.request.set | nindent 16 }}
+              {{- end }}{{- end }}{{- end }}
+              {{- if .headers }}{{- if .headers.request }}{{- if .headers.request.remove }}
+              remove:
+                {{- toYaml .headers.request.set | nindent 16 }}
+              {{- end }}{{- end }}{{- end }}
+          {{- else if .headers }}
+          headers:
+            {{- toYaml .headers | nindent 12 }}
+          {{- end }}
+        {{- end }}
+      {{- else }}
+      {{ $http_k }}:
+        {{- tpl (toYaml  .) $ | nindent 8 }}
+      {{- end }}
+    {{- end }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.virtualService.tls }}
+  tls:
+    {{- with .Values.virtualService.tls }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.virtualService.tcp }}
+  tcp:
+    {{- with .Values.virtualService.tcp }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+  {{- if .Values.virtualService.exportTo }}
+  exportTo:
+    {{- with .Values.virtualService.exportTo }}
+    {{- toYaml . | nindent 4 }}
+    {{- end }}
+  {{- end }}
+{{- end }}
+
+
